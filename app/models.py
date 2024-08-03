@@ -38,16 +38,16 @@ class User(db.Model):
     #     return super().__repr__()
 
 
-    # # The User class will have a 'posts' field, that is initialized with so.relationship() below.
-    # # This is not an actual database field, but a high-level view of the relationship between users and posts
-    # # The posts relationship attribute uses a different typing definition. Instead of so.Mapped, the posts field uses so.WriteOnlyMapped, which defines posts as a collection type with Post objects inside.
-    # # The first argument to so.relationship() is the model class that represents the other side of the relationship. This argument can be provided as a string (i.e. 'Post'), which is necessary when the class is defined later in the module.
-    # posts: so.WriteOnlyMapped['Post'] = so.relationship(
+    # The User class will have a 'posts' field, that is initialized with so.relationship() below.
+    # This is not an actual database field, but a high-level view of the relationship between users and posts
+    # The posts relationship attribute uses a different typing definition. Instead of so.Mapped, the posts field uses so.WriteOnlyMapped, which defines posts as a collection type with Post objects inside.
+    # The first argument to so.relationship() is the model class that represents the other side of the relationship. This argument can be provided as a string (i.e. 'Post'), which is necessary when the class is defined later in the module.
+    posts: so.WriteOnlyMapped['Post'] = so.relationship(
 
-    #     # The back_populates arguments reference the name of the relationship attribute on the other side (i.e. author <-> posts),
-    #     # so that SQLAlchemy knows that these attributes refer to the two sides of the same relationship.
-    #     back_populates='author'
-    # )
+        # The back_populates arguments reference the name of the relationship attribute on the other side (i.e. author <-> posts),
+        # so that SQLAlchemy knows that these attributes refer to the two sides of the same relationship.
+        back_populates='author'
+    )
 
 
     # The __repr__ method tells Python how to print objects of this class,
@@ -57,45 +57,45 @@ class User(db.Model):
     
 
 
-# # Creating a database model for posts to represent post blogs written by users
-# class Post(db.Model):
-#     id: so.Mapped[int] = so.mapped_column(primary_key=True)
+# Creating a database model for posts to represent post blogs written by users
+class Post(db.Model):
+    id: so.Mapped[int] = so.mapped_column(primary_key=True)
 
-#     # body contains the body of the post as a string
-#     body: so.Mapped[str] = so.mapped_column(sa.String(140))
-#     timestamp: so.Mapped[datetime] = so.mapped_column(
+    # body contains the body of the post as a string
+    body: so.Mapped[str] = so.mapped_column(sa.String(140))
+    timestamp: so.Mapped[datetime] = so.mapped_column(
 
-#         # configured timestamp to be indexed, which is useful if you want to efficiently retrieve posts in chronological order.
-#         index=True,
+        # configured timestamp to be indexed, which is useful if you want to efficiently retrieve posts in chronological order.
+        index=True,
 
-#         # added a default argument, and passed a lambda function that returns the current time in the UTC timezone.
-#         # When you pass a function as a default, SQLAlchemy will set the field to the value returned by the function.
-#         # In general, you will want to work with UTC dates and times in a server application instead of the local time where you are located.
-#         # This ensures that you are using uniform timestamps regardless of where the users and the server are located.
-#         # These timestamps will be converted to the user's local time when they are displayed.
-#         default=lambda: datetime.now(timezone.utc)
-#         )
+        # added a default argument, and passed a lambda function that returns the current time in the UTC timezone.
+        # When you pass a function as a default, SQLAlchemy will set the field to the value returned by the function.
+        # In general, you will want to work with UTC dates and times in a server application instead of the local time where you are located.
+        # This ensures that you are using uniform timestamps regardless of where the users and the server are located.
+        # These timestamps will be converted to the user's local time when they are displayed.
+        default=lambda: datetime.now(timezone.utc)
+        )
     
 
-#     user_id: so.Mapped[int] = so.mapped_column(
+    user_id: so.Mapped[int] = so.mapped_column(
 
-#         # The user_id field was initialized as a foreign key to User.id, which means that it references values from the id column in the users table.
-#         sa.ForeignKey(User.id),
+        # The user_id field was initialized as a foreign key to User.id, which means that it references values from the id column in the users table.
+        sa.ForeignKey(User.id),
         
-#         # Since not all databases automatically create an index for foreign keys,
-#         # the index=True option is added explicitly, so that searches based on this column are optimized.
-#         index=True
-#     )
+        # Since not all databases automatically create an index for foreign keys,
+        # the index=True option is added explicitly, so that searches based on this column are optimized.
+        index=True
+    )
 
-#     # Similar to the 'posts field bring in the User class,
-#     # the Post class has an author field that is also initialized as a relationship.
-#     # These two attributes allow the application to access the connected user and post entries.
-#     # Notice that here, the argument is not provided as a string (User refers to the class model).
-#     # This is because the User class was already defined earlier in this python module
-#     author: so.Mapped[User] = so.relationship(
-#         back_populates='posts'
-#         )
+    # Similar to the 'posts field bring in the User class,
+    # the Post class has an author field that is also initialized as a relationship.
+    # These two attributes allow the application to access the connected user and post entries.
+    # Notice that here, the argument is not provided as a string (User refers to the class model).
+    # This is because the User class was already defined earlier in this python module
+    author: so.Mapped[User] = so.relationship(
+        back_populates='posts'
+        )
 
 
-#     def __repr__(self):
-#         return '<Post {}>'.format(self.body)
+    def __repr__(self):
+        return '<Post {}>'.format(self.body)

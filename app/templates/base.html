@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <!-- if view forgets to pass a placeholder variable then it doesn't error out. instead it uses a generic title -->
+        {% if title %}
+        <title>{{ title }} - Microblog</title>
+        {% else %}
+        <title>Welcome to Microblog!</title>
+        {% endif %}
+    </head>
+    <body>
+        <div>
+            Microblog:
+            <!-- Setting up the links in the navbar
+            while we can use href="/index" here, having urls hardcoded is not good.
+            instead we use flask's url_for function so that the url is automatically updated if we switch folders around
+            the argument for url_for() is the endpoint name, which is the name of the view function -->
+            <a href="{{ url_for('index') }}">Home</a>
+            <a href="{{ url_for('login') }}">Login</a>
+        </div>
+        <hr>
+
+        <!-- adding ability for flashed messages
+        using a with construct to assign the result of calling get_flashed_messages() to a messages variable, all in the context of the template. -->
+        {% with messages = get_flashed_messages() %}
+
+        <!-- check if messages have some content, if so render list of items for messages -->
+        {% if messages %}
+        <ul>
+            {% for message in messages %}
+            <li>{{ message }}</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+
+    </body>
+</html>

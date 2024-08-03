@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h1>Sign In</h1>
+
+<!--creating a web form. action attribute is used to tell the browser the URL that should be used when submitting the information the user entered in the form.  -->
+<!-- novalidate attribute is used to tell the web browser to not apply validation to the fields in this form, which effectively leaves this task to the Flask application running in the server. -->
+<form action="" method="post" novalidate>
+
+    <!-- Generates a hidden field that includes a token that is used to protect the form against CSRF attacks.
+    All you need to do to have the form protected is include this hidden field and have the SECRET_KEY variable defined in the Flask configuration.
+    If you take care of these two things, Flask-WTF does the rest for you. -->
+    {{ form.hidden_tag() }}
+
+    <p>
+        {{ form.username.label }} <br>
+        {{ form.username(size=32)}}<br>
+
+        <!-- adding for loop to render error message in red
+        error message is automatically pulled from server side validation specified in the forms.py module
+        As a general rule, any fields that have validators attached will have any error messages that result from validation added under form.<field_name>.errors -->
+        {% for error in form.username.errors %}
+        <span style="color: red;">[{{ error }}]</span>
+        {% endfor %} 
+    </p>
+
+    <p>
+        {{ form.password.label }}<br>
+        {{ form.password(size=32)}}<br>
+        
+        {% for error in form.password.errors %}
+        <span style="color: red;">[{{ error }}]</span>
+        {% endfor %}
+
+        
+    </p>
+
+    <p>{{ form.remember_me() }} {{ form.remember_me.label }}</p>
+    <p>{{ form.submit() }}</p>
+
+
+</form>
+
+{% endblock %}

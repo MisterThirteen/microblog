@@ -1,3 +1,8 @@
+# Python module that defines the database models required
+
+# importing werkzeug for password security
+from werkzeug.security import generate_password_hash, check_password_hash
+
 from datetime import datetime, timezone
 from typing import Optional
 # sqlalchemy module includes general purpose database functions and classes such as types and query building helpers
@@ -48,6 +53,16 @@ class User(db.Model):
         # so that SQLAlchemy knows that these attributes refer to the two sides of the same relationship.
         back_populates='author'
     )
+
+
+    # Function that allows the user to set their password
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    
+    # Function that checks user entered password against saved password
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
 
     # The __repr__ method tells Python how to print objects of this class,

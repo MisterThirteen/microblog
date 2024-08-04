@@ -13,12 +13,17 @@ import sqlalchemy.orm  as so
 #importing the database instance from flask sqlalchemy
 from app import db
 
+# importing 
+from app import login
+
+#importing UserMixin to simplify user authentication for flask login
+from flask_login import UserMixin
 
 # class to represent users stored in the database
 # The class inherits from db.Model, a base class for all models from Flask-SQLAlchemy.
 # The User model defines several fields as class variables.
 # These are the columns that will be created in the corresponding database table.
-class User(db.Model):
+class User(UserMixin, db.Model):
 
     # In most cases defining a table column requires more than the column type.
     # SQLAlchemy uses a so.mapped_column() function call assigned to each column to provide this additional configuration.
@@ -114,3 +119,14 @@ class Post(db.Model):
 
     def __repr__(self):
         return '<Post {}>'.format(self.body)
+
+
+# Configuring a user loader callback function, that can be called to load a user given the ID
+# this is required because Flask-Login knows nothing about databases, it needs the application's help in loading a user
+# The user loader is registered with Flask-Login with the @login.user_loader decorator.
+@login.user_loader
+def load_user(id):
+
+    # The id that Flask-Login passes to the function as an argument is going to be a string,
+    # # so databases that use numeric IDs need to convert the string to integer as you see below.
+    return db.session.get(User, int(id))

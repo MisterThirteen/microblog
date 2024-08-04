@@ -22,7 +22,11 @@
             The current_user.is_anonymous expression is going to be True only when the user is not logged in. -->
             {% if current_user.is_anonymous %}
             <a href="{{ url_for('login') }}">Login</a>
+
+            <!-- else show the below in the navbar since the authenticated / logged in user -->
             {% else %}
+            <!-- see below, we pass pull from Flask-Login's current_user -->
+            <a href="{{ url_for('user', username=current_user.username) }}">Profile</a>
             <a href="{{ url_for('logout') }}">Logout</a>
             {% endif %}
 

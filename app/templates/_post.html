@@ -1,0 +1,10 @@
+<!-- Creating a Jinja sub-template for posts so that it can be re-used across user.html and index.html
+the sub-template below is the HTML markup for a single post
+The _ prefix (i.e. _post.html) is just a naming convention to help us recognize which template files are sub-templates -->
+
+<table>
+    <tr valign="top">
+        <td><img src="{{ post.author.avatar(36)}}"></td>
+        <td>{{ post.author.username }} says: <br>{{ post.body }}</td>
+    </tr>
+</table>

@@ -19,6 +19,10 @@ from app import login
 #importing UserMixin to simplify user authentication for flask login
 from flask_login import UserMixin
 
+# importing hashlib md5 for profile avatars
+from hashlib import md5
+
+
 # class to represent users stored in the database
 # The class inherits from db.Model, a base class for all models from Flask-SQLAlchemy.
 # The User model defines several fields as class variables.
@@ -74,6 +78,25 @@ class User(UserMixin, db.Model):
     # which is going to be useful for debugging.
     def __repr__(self):
         return '<User {}>'.format(self.username)
+    
+    # The avatar() method (see below) of the User class returns the URL of the user's avatar image, scaled to the requested size in pixels. 
+    # For users that don't have an avatar registered, an "identicon" image will be generated. To generate the MD5 hash, 
+    # I first convert the email to lower case, as this is required by the Gravatar service. 
+    # Then, because the MD5 support in Python works on bytes and not on strings, 
+    # I encode the string as bytes before passing it on to the hash function.
+    def avatar(self, size):
+        digest = md5(self.email.lower().encode('utf-8')).hexdigest()
+
+        # By making the User class responsible for returning avatar URLs is that if some day I decide Gravatar avatars are not what I want, 
+        # I can just rewrite the avatar() method to return different URLs, and all the templates will start showing the new avatars automatically
+        return f'https://www.gravatar.com/avatar/{digest}?d=identicon&s={size}'
+    
+
+    # Optional fields for users to provide some information about themselves
+    about_me: so.Mapped[Optional[str]] = so.mapped_column(sa.String(140))
+    last_seen: so.Mapped[Optional[datetime]] = so.mapped_column(
+        default=lambda: datetime.now(timezone.utc)
+        )
     
 
 

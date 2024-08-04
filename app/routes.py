@@ -19,7 +19,6 @@ from app.models import User
 @app.route('/index')
 @login_required
 def index():
-    user = {'username':'Miguel'}
 
     posts = [
         {
@@ -139,3 +138,24 @@ def register():
         return redirect(url_for('login'))
     
     return render_template('register.html', title='Register', form=form)
+
+# creating user profile page route and functionality.
+# This time we have a dynamic component in the route, which is indicated as the <username> URL component that is surrounded by < and >. 
+# When a route has a dynamic component, Flask will accept any text in that portion of the URL, 
+# and will invoke the view function with the actual text as an argument. For example, if the client browser requests URL /user/susan, 
+# the view function is going to be called with the argument username set to 'susan'
+@app.route('/user/<username>')
+@login_required
+def user(username):#username argument is provided when user clicks on the 'Profile' button on the navbar. See base.html file
+
+    # db.first_or_404() works like scalar() when there are results, but in the case that there are no results it automatically sends 
+    # a 404 error back to the client. By executing the query in this way I save myself from checking if the query returned a user, 
+    # because when the username does not exist in the database the function will not return and instead a 404 exception will be raised.
+    user = db.first_or_404(sa.select(User).where(User.username == username))
+    posts = [
+        {'author': user, 'body': 'Test post #1'},
+        {'author': user, 'body': 'Test post #2'}        
+    ]
+
+
+    return render_template('user.html', user=user, posts=posts)

@@ -1,3 +1,5 @@
 plsignore.txt
 venv
 app.db
+oldreqs.txt
+logs

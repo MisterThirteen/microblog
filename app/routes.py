@@ -188,7 +188,7 @@ def before_request():
 @app.route('/edit_profile', methods = ['GET', 'POST'])
 @login_required
 def edit_profile():
-    form = EditProfileForm()
+    form = EditProfileForm(current_user.username)
 
     # If validate_on_submit() returns True I copy the data from the form into the user object and then write the object to the database
     if form.validate_on_submit():

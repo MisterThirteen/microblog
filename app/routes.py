@@ -7,13 +7,17 @@ from urllib.parse import urlsplit
 from app import app
 
 #importing forms
-from app.forms import LoginForm, RegistrationForm
+from app.forms import LoginForm, RegistrationForm, EditProfileForm
 
 # importing modules required for user login routing
 from flask_login import current_user, login_user, logout_user, login_required
 import sqlalchemy as sa
 from app import db
 from app.models import User
+
+# importing datetime for datetime stamps, particularly to record when a user was last seen
+from datetime import datetime, timezone
+
 
 @app.route('/')
 @app.route('/index')
@@ -159,3 +163,47 @@ def user(username):#username argument is provided when user clicks on the 'Profi
 
 
     return render_template('user.html', user=user, posts=posts)
+
+
+# The @before_request decorator from Flask register the decorated function to be executed right before the view function
+# This is extremely useful because now I can insert code that I want to execute before any view function in the application, and I can have it in a single place.
+@app.before_request
+def before_request():
+
+    # checks if the current_user is logged in, and in that case sets the last_seen field to the current time
+    if current_user.is_authenticated:
+
+        # a server application needs to work in consistent time units, and the standard practice is to use the UTC time zone.
+        # It is not recommended to use local time
+        current_user.last_seen = datetime.now(timezone.utc)
+
+        # We can also specify db.session.add() before db.session.commit(), but it is not required here
+        # This is because when you reference current_user, Flask-Login will invoke the user loader callback function, 
+        # which will run a database query that will put the target user in the database session. 
+        # So you can add the user again in this function, but it is not necessary because it is already there.
+        db.session.commit()
+
+
+# Routing for edit_profile.html and EditProfileForm
+@app.route('/edit_profile', methods = ['GET', 'POST'])
+@login_required
+def edit_profile():
+    form = EditProfileForm()
+
+    # If validate_on_submit() returns True I copy the data from the form into the user object and then write the object to the database
+    if form.validate_on_submit():
+        current_user.username = form.username.data
+        current_user.about_me = form.about_me.data
+        db.session.commit()
+        flash('Your changes have been saved')
+
+        return redirect(url_for('edit_profile'))
+    
+    # when validate_on_submit() returns False it can be due to two different reasons. We need to treat these two cases separately.
+    # First, it can be because the browser just sent a GET request. We respond to this by providing an initial version of the form template (by having the current stored data pre-filled in the fields)
+    # Second reason can also be when the browser sends a POST request with form data, but something in that data is invalid.
+    elif request.method == 'GET':#checking request.method to distinguish between these two cases
+        form.username.data = current_user.username
+        form.about_me.data = current_user.about_me
+
+    return render_template('edit_profile.html', title='Edit Profile', form=form)

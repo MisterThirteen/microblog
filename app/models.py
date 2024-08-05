@@ -93,6 +93,7 @@ class User(UserMixin, db.Model):
     
 
     # Optional fields for users to provide some information about themselves
+    # The string length of 140 characters is enforced in the form validation
     about_me: so.Mapped[Optional[str]] = so.mapped_column(sa.String(140))
     last_seen: so.Mapped[Optional[datetime]] = so.mapped_column(
         default=lambda: datetime.now(timezone.utc)
@@ -151,5 +152,5 @@ class Post(db.Model):
 def load_user(id):
 
     # The id that Flask-Login passes to the function as an argument is going to be a string,
-    # # so databases that use numeric IDs need to convert the string to integer as you see below.
+    # so databases that use numeric IDs need to convert the string to integer as you see below.
     return db.session.get(User, int(id))

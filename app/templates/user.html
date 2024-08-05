@@ -1,4 +1,4 @@
-<!-- Extending base html to create the home page that the user sees upon logging in -->
+<!-- Extending base html to create the user profile page where information about the user and their posts can be viewed -->
 
 {% extends "base.html" %}
 
@@ -8,7 +8,20 @@
     <table>
         <tr valign="top">
             <td><img src="{{ user.avatar(128)}}"></td>
-            <td><h1>User: {{ user.username }}</h1></td>
+            <td>
+                <h1>User: {{ user.username }}</h1>
+
+                <!-- Adding about me and last seen to the user profile
+                We wrap them in Jinja conditionals, as we only want them visible if they are set -->
+                {% if user.about_me %}<p>{{ user.about_me }}</p>{% endif %}
+                {% if user.last_seen %}<p>Last seen on: {{ user.last_seen }}</p>{% endif %}
+
+                <!-- Use a conditional to see if the user is browsing their own profile
+                If so, provide a link to edit their own profile -->
+                {% if user == current_user %}
+                <p><a href="{{ url_for('edit_profile') }}">Edit your profile</a></p>
+                {% endif %}
+            </td>
         </tr>
     </table>
     <hr>
@@ -17,8 +30,9 @@
 
         <!-- Using Jinja's include statement to utilise the posts sub-template -->
         {% include '_post.html' %}
-        
+
     {% endfor %}
+
 
 
 {% endblock %}

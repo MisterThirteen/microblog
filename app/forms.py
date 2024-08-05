@@ -2,8 +2,8 @@
 
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import DataRequired, ValidationError, Email, EqualTo
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, TextAreaField
+from wtforms.validators import DataRequired, ValidationError, Email, EqualTo, Length
 import sqlalchemy as sa
 from app import db
 from app.models import User
@@ -54,3 +54,18 @@ class RegistrationForm(FlaskForm):
         if user is not None:
             raise ValidationError('Please use a different email address')
         
+
+# a form in which they can edit some information about themselves. 
+# The form is going to let users change their username, 
+# and also write something about themselves, to be stored in the new about_me field.
+class EditProfileForm(FlaskForm):
+
+    username = StringField('Username', validators=[DataRequired()])
+
+    # TextAreaField is a multi-line box in which the user can enter text. 
+    # To validate this field I'm using Length, to make sure that the text entered is between 0 and 140 characters, 
+    # This length validation matches the space allocated for the corresponding field in the database (specified in models.py).
+    about_me = TextAreaField('About me', validators=[Length(min=0, max=140)])
+
+
+    submit = SubmitField('Submit')

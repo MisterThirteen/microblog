@@ -23,6 +23,20 @@ from flask_login import UserMixin
 from hashlib import md5
 
 
+# class to initialise followers association
+# It is important that this is added ABOVE the User model in models.py, so that the User model can reference it
+# sa.Table class from SQLAlchemy directly represents a database table
+followers = sa.Table(
+    'followers',#The table name is given as first argument.
+    db.metadata,#second argument is that metadata, the place where SQLAlchemy stores the information about all the tables in the database. When using Flask-SQLAlchemy, the metadata instance can be obtained with db.metadata
+    # For this table neither of the foreign keys will have unique values that can be used as a primary key on their own, but the pair of foreign keys combined is going to be unique. For that reason both columns are marked as primary keys. This is called a compound primary key.
+    sa.Column('follower_id', sa.Integer, sa.ForeignKey('user.id'), primary_key=True),# The columns of this table are instances of sa.Column initialized with the column name, type and options
+    sa.Column('followed_id', sa.Integer, sa.ForeignKey('user.id'), primary_key=True)
+)
+
+
+
+
 # class to represent users stored in the database
 # The class inherits from db.Model, a base class for all models from Flask-SQLAlchemy.
 # The User model defines several fields as class variables.
@@ -99,6 +113,45 @@ class User(UserMixin, db.Model):
         default=lambda: datetime.now(timezone.utc)
         )
     
+
+    # follower functionality added to User model
+    # Similar to the posts one-to-many relationship, we're using the so.relationship function to define the relationship in the model class
+    # This relationship links User instances to other User instances, so as a convention let's say that for a pair of users linked by this relationship, the left side user is following the right side user
+    # defining the relationship as seen from the left side user with the name following because when I query this relationship from the left side I will get the list of users the left-side user is following
+    following: so.WriteOnlyMapped['User'] = so.relationship(
+        secondary=followers, primaryjoin=(followers.c.follower_id == id),#primaryjoin indicates the condition that links the entity to the association table. In the following relationship, the user has to match the follower_id attribute of the association table.  In the following relationship, the user has to match the follower_id attribute
+        secondaryjoin=(followers.c.followed_id == id),# secondaryjoin indicates the condition that links the association table to the user on the other side of the relationship
+        back_populates='followers')
+    
+    # Conversely, the followers relationship starts from the right side and finds all the users that follow a given user.
+    followers: so.WriteOnlyMapped['User'] = so.relationship(
+        secondary=followers, primaryjoin=(followers.c.followed_id == id),# In the following relationship, the user has to match the followed_id column
+        secondaryjoin=(followers.c.follower_id == id),
+        back_populates='following')
+
+
+    def follow(self, user):
+        if not self.is_following(user):
+            self.following.add(user)
+
+    def unfollow(self, user):
+        if self.is_following(user):
+            self.following.remove(user)
+
+    def is_following(self, user):
+        query = self.following.select().where(User.id == user.id)
+        return db.session.scalar(query) is not None
+
+    def followers_count(self):
+        query = sa.select(sa.func.count()).select_from(
+            self.followers.select().subquery())
+        return db.session.scalar(query)
+
+    def following_count(self):
+        query = sa.select(sa.func.count()).select_from(
+            self.following.select().subquery())
+        return db.session.scalar(query)
+
 
 
 # Creating a database model for posts to represent post blogs written by users

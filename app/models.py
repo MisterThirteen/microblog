@@ -128,29 +128,45 @@ class User(UserMixin, db.Model):
         secondary=followers, primaryjoin=(followers.c.followed_id == id),# In the following relationship, the user has to match the followed_id column
         secondaryjoin=(followers.c.follower_id == id),
         back_populates='following')
+    
+    #  the five functions below are methods to query and change follower associations.
+    #  It is always best to move the application logic away from view functions and into models or other auxiliary classes or modules, because that makes unit testing much easier.
 
-
+    #function to add this user as a follower of another user
     def follow(self, user):
+        #  use the is_following() supporting method to make sure the requested action will not result in duplication
         if not self.is_following(user):
             self.following.add(user)
 
     def unfollow(self, user):
+        # using the is_following() supporting method to ensure that this user is currently following the other user, before removing them as a follower
         if self.is_following(user):
             self.following.remove(user)
 
+    # function to check whether this user is already following another user
     def is_following(self, user):
+        # performs a query on the following relationship to see if a given user is already included in it.
+        # All write-only relationships have a select() method that constructs a query that returns all the elements in the relationship.
+        # In this case I do not need to request all the elements, I'm just looking for a specific user, so I can restrict the query with a where() clause.
         query = self.following.select().where(User.id == user.id)
         return db.session.scalar(query) is not None
+    
 
+    # methods return the follower counts for the user (ie the number of users this user is following). 
     def followers_count(self):
-        query = sa.select(sa.func.count()).select_from(
-            self.followers.select().subquery())
+        # This requires a different type of query, in which the results are not returned, but just their count is.
+        # The sa.select() clause for these queries specify the sa.func.count() function from SQLAlchemy, to indicate that I want to get the result of a function.
+        # The select_from() clause is then added with the query that needs to be counted.
+        # Whenever a query is included as part of a larger query, SQLAlchemy requires the inner query to be converted to a sub-query by calling the subquery() method.
+        query = sa.select(sa.func.count()).select_from(self.followers.select().subquery())
+        return db.session.scalar(query)
+    
+    def following_count(self):
+        query = sa.select(sa.func.count()).select_from(self.following.select().subquery())
         return db.session.scalar(query)
 
-    def following_count(self):
-        query = sa.select(sa.func.count()).select_from(
-            self.following.select().subquery())
-        return db.session.scalar(query)
+
+
 
 
 

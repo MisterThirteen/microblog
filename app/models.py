@@ -31,7 +31,7 @@ followers = sa.Table(
     db.metadata,#second argument is that metadata, the place where SQLAlchemy stores the information about all the tables in the database. When using Flask-SQLAlchemy, the metadata instance can be obtained with db.metadata
     # For this table neither of the foreign keys will have unique values that can be used as a primary key on their own, but the pair of foreign keys combined is going to be unique. For that reason both columns are marked as primary keys. This is called a compound primary key.
     sa.Column('follower_id', sa.Integer, sa.ForeignKey('user.id'), primary_key=True),# The columns of this table are instances of sa.Column initialized with the column name, type and options
-    sa.Column('followed_id', sa.Integer, sa.ForeignKey('user.id'), primary_key=True)
+    sa.Column('followed_id', sa.Integer, sa.ForeignKey('user.id'), primary_key=True)# stores the user id of users being followed by the user id specified in the 'follower_id' column
 )
 
 
@@ -118,12 +118,13 @@ class User(UserMixin, db.Model):
     # Similar to the posts one-to-many relationship, we're using the so.relationship function to define the relationship in the model class
     # This relationship links User instances to other User instances, so as a convention let's say that for a pair of users linked by this relationship, the left side user is following the right side user
     # defining the relationship as seen from the left side user with the name following because when I query this relationship from the left side I will get the list of users the left-side user is following
+    # This lists the users that this particular user is following
     following: so.WriteOnlyMapped['User'] = so.relationship(
         secondary=followers, primaryjoin=(followers.c.follower_id == id),#primaryjoin indicates the condition that links the entity to the association table. In the following relationship, the user has to match the follower_id attribute of the association table.  In the following relationship, the user has to match the follower_id attribute
         secondaryjoin=(followers.c.followed_id == id),# secondaryjoin indicates the condition that links the association table to the user on the other side of the relationship
         back_populates='followers')
     
-    # Conversely, the followers relationship starts from the right side and finds all the users that follow a given user.
+    # Conversely, the followers relationship starts from the right side and finds all the users that follow this particular user.
     followers: so.WriteOnlyMapped['User'] = so.relationship(
         secondary=followers, primaryjoin=(followers.c.followed_id == id),# In the following relationship, the user has to match the followed_id column
         secondaryjoin=(followers.c.follower_id == id),
@@ -152,7 +153,7 @@ class User(UserMixin, db.Model):
         return db.session.scalar(query) is not None
     
 
-    # methods return the follower counts for the user (ie the number of users this user is following). 
+    # methods return the follower counts for the user (ie the number of users that are following this user). 
     def followers_count(self):
         # This requires a different type of query, in which the results are not returned, but just their count is.
         # The sa.select() clause for these queries specify the sa.func.count() function from SQLAlchemy, to indicate that I want to get the result of a function.
@@ -161,9 +162,68 @@ class User(UserMixin, db.Model):
         query = sa.select(sa.func.count()).select_from(self.followers.select().subquery())
         return db.session.scalar(query)
     
+    
+    # methods return the following counts for the user (ie the number of users this user is following). 
     def following_count(self):
         query = sa.select(sa.func.count()).select_from(self.following.select().subquery())
         return db.session.scalar(query)
+    
+
+
+    # database method for providing, for any individual user, the posts authored by other users that individual user is following
+    # Using a database method is much more efficient than doing this in the app (e.g. in views)
+    def following_posts(self):
+
+        # The so.aliased() calls are used to create two references to the User model that I can use in the query
+        # This is necessary because we need to treat users in two capacities.
+        # First we need to treat them as Authors of posts, so we know who has created a particular post
+        # Second we need to treat them as Followers of other users, so we know 'Authors' a given user is wanting to Follow
+        # By having both, we can provide an individual user the posts of the other users they are following.
+        Author = so.aliased(User)
+        Follower = so.aliased(User)
+        return(
+            # select() portion of the query defines the entity that needs to be obtained, which in this case is posts
+            # Posts are the left side of this query
+            sa.select(Post)
+            #  joining the entries in the posts table with the Post.author relationship. This creates an extended table that provides access to posts, along with information about the author of each post
+            # When the join() clause is given a relationship as an argument, SQLAlchemy combines the rows from the left and right sides of the relationship.
+            # the of_type(Author) qualifier on the joined relationship tells SQLAlchemy that in the rest of the query I'm going to refer to the right side entity of the relationship with the Author alias
+            .join(Post.author.of_type(Author))
+            # join on the Author.followers relationship, with Author being the alias for User defined above.
+            # This is a many-to-many relationship, so the followers association table must implicitly be part of the join as well. 
+            # The users that are added to the combined table as a result of this new join will use the Follower alias.
+            # The User.followers relationship has followed users on the left side, defined by the followed_id foreign in the association table, and their followers on the right side, defined by the follower_id foreign key.
+            # the result of the join below is a list of all posts that are followed users. Note that this excludes posts that are not being followed by any user
+            .join(
+                Author.followers.of_type(Follower),
+                # Making this an outer join, to be able to include the user's own posts.
+                # It is necessary to change the join to keep posts that have no matches on the right side of the join. This results in a left outer join
+                # Without isouter=True, this would be an inner join, and posts written by Authors with zero followers would be dropped
+                # a left outer join is used instead, which preserves items from the left side that have no match on the right.
+                isouter=True
+                )
+            # Applying a filter to obtain a subset of this list of all
+            # The result of the where() method below is a list of all posts that are being followed by this particular user
+            # Since this query is in a method of class User, the self.id expression refers to the user I'm interested in retrieving posts for
+            # The where() call selects the items in the joined table that have this user as a follower
+            # Follower in this query is an alias to User that is necessary so that SQLAlchemy knows which one of the two users that are included in each row in the table the filter is based on
+            # However, a user will likely want to see their own posts, in addition to the posts they are following.
+            # To do this, we insert sa.or_() to use a union inside the where() method, so that we filter by posts where this particular user is following a post, or this particular user is the author of the post
+            .where(sa.or_(
+                # Include posts where this particular user is a follower
+                Follower.id == self.id,
+                # Include posts where this particular user is the author 
+                Author.id == self.id
+                ))
+            # Because of the joins above, there will be rows with duplicate posts for certain users (e.g. when a user has multiple followers)
+            # Duplication on joined tables is actually very common
+            # An easy way to remove duplicates is to use a group_by() clause after filtering has been done, which eliminates any duplicates of the provided arguments.
+            # Since we want to remove duplicate posts, we provide Post as an argument, which SQLAlchemy will interpret as all the attributes of the model
+            .group_by(Post)
+            # Sorting results by the timestamp field of the post in descending order.
+            # With this ordering, the first result will be the most recent blog post.
+            .order_by(Post.timestamp.desc())
+        )
 
 
 

@@ -7,7 +7,7 @@ from urllib.parse import urlsplit
 from app import app
 
 #importing forms
-from app.forms import LoginForm, RegistrationForm, EditProfileForm
+from app.forms import LoginForm, RegistrationForm, EditProfileForm, EmptyForm
 
 # importing modules required for user login routing
 from flask_login import current_user, login_user, logout_user, login_required
@@ -161,8 +161,14 @@ def user(username):#username argument is provided when user clicks on the 'Profi
         {'author': user, 'body': 'Test post #2'}        
     ]
 
+    # Rendering the follow or unfollow button by  instantiateing an EmptyForm object and pass it to the user.html template.
+    # Because these two actions are mutually exclusive, we can pass a single instance of this generic form to the template
+    # For more info on the follow and unfollow methods, see follow routing method in routes.py
+    # Also can see follow and unfollow methods in User class in methods.py
+    form = EmptyForm()
 
-    return render_template('user.html', user=user, posts=posts)
+
+    return render_template('user.html', user=user, posts=posts, form=form)
 
 
 # The @before_request decorator from Flask register the decorated function to be executed right before the view function
@@ -207,3 +213,64 @@ def edit_profile():
         form.about_me.data = current_user.about_me
 
     return render_template('edit_profile.html', title='Edit Profile', form=form)
+
+
+# Routing for following another user
+# Unlike other forms such as the login and edit profile forms, these two forms do not have their own pages,
+# the forms will be rendered by the user() route and will appear in the user's profile page.
+# The only reason why the validate_on_submit() call can fail is if the CSRF token is missing or invalid, so in that case we just redirect the application back to the home page.
+# To render the follow or unfollow button, weq need to instantiate an EmptyForm object and pass it to the user.html template.
+@app.route('/follow/<username>', methods=['POST'])
+@login_required
+def follow(username):
+    form = EmptyForm()
+
+    if form.validate_on_submit():
+        user = db.session.scalar(
+            sa.select(User).where(User.username == username)
+        )
+
+        # some error checking before actually carrying out the follow or unfollow action.
+        # This is to prevent unexpected issues, and to try to provide a useful message to the user when a problem has occurred.
+        if user is None:
+            flash(f'User {username} not found')
+            return redirect(url_for('index'))        
+        if user == current_user:
+            flash('You cannot follow yourself')
+            return redirect(url_for('user', username=username))
+        
+        # using follow method from User model to follow another user
+        current_user.follow(user)
+        db.session.commit()
+        flash(f'You are following {username}!')
+        return redirect(url_for('user', username=username))
+    
+    else:
+        return redirect(url_for('index'))
+    
+# Routing for unfollowing another user
+# Similar to routing for following another user. Refer to 'follow' method in routes.py for comments and info
+@app.route('/unfollow/<username>', methods=['POST'])
+@login_required
+def unfollow(username):
+    form = EmptyForm()
+    if form.validate_on_submit():
+        user = db.session.scalar(
+            sa.select(User).where(User.username == username)
+        )
+
+        if user is None:
+            flash(f'User {username} not found')
+            return redirect(url_for('index'))
+        if user == current_user:
+            flash('You cannot unfollow yourself!')
+            return redirect(url_for('user', username=username))
+        
+        # Method for this user to unfollow the other user
+        current_user.unfollow(user)
+        db.session.commit()
+        flash(f'You are not following {username}')
+        return redirect(url_for('user', username=username))
+    
+    else:
+        return redirect(url_for('index'))

@@ -20,6 +20,26 @@
                 If so, provide a link to edit their own profile -->
                 {% if user == current_user %}
                 <p><a href="{{ url_for('edit_profile') }}">Edit your profile</a></p>
+
+                <!-- If the user is not viewing their own profile, show follow and unfollow buttons
+                For this first one, check that the current user is not already following the user who's profile they are viewing -->
+                {% elif not current_user.is_following(user) %}
+                <!-- If so, add follow button -->
+                <p>
+                    <form action="{{ url_for('follow', username=user.username) }}" method="post">
+                        {{ form.hidden_tag() }}
+                        {{ form.submit(value='Follow') }}
+                    </form>
+                </p>
+                <!-- If the user is not viewing their own profile, show follow and unfollow buttons
+                If already following, add unfollow button -->
+                {% else %}
+                <p>
+                    <form action="{{ url_for('unfollow', username=user.username) }}" method="post">
+                        {{ form.hidden_tag() }}
+                        {{ form.submit(value='Unfollow') }}
+                    </form>
+                </p>
                 {% endif %}
             </td>
         </tr>

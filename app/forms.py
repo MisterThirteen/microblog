@@ -83,3 +83,12 @@ class EditProfileForm(FlaskForm):
                 User.username == username.data))
             if user is not None:
                 raise ValidationError('Please use a different username.')
+
+
+# Form for following and unfollowing other users
+# Because the follow and unfollow actions introduce changes in the application, 
+# we're going to implement them as POST requests, which are triggered from the web browser as a result of submitting a web form.
+# It would be easier to implement these routes as GET requests, but then they could be exploited in CSRF attacks
+# GET requests should only be used on actions that do not introduce state changes
+class EmptyForm(FlaskForm):
+    submit = SubmitField('Submit')

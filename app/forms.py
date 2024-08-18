@@ -92,3 +92,16 @@ class EditProfileForm(FlaskForm):
 # GET requests should only be used on actions that do not introduce state changes
 class EmptyForm(FlaskForm):
     submit = SubmitField('Submit')
+
+
+
+# Form for blog posts
+# Will sit in the home page, so it needs to have a form in which users can type new posts
+class PostForm(FlaskForm):
+    post = TextAreaField(
+        'Say something',
+        validators=[DataRequired(), Length=(min=1, max=140)]
+
+    )
+    submit = SubmitField('Submit')
+

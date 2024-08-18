@@ -7,22 +7,32 @@ from urllib.parse import urlsplit
 from app import app
 
 #importing forms
-from app.forms import LoginForm, RegistrationForm, EditProfileForm, EmptyForm
+from app.forms import LoginForm, RegistrationForm, EditProfileForm, EmptyForm, PostForm
 
 # importing modules required for user login routing
 from flask_login import current_user, login_user, logout_user, login_required
 import sqlalchemy as sa
 from app import db
-from app.models import User
+
+
+from app.models import User, Post
 
 # importing datetime for datetime stamps, particularly to record when a user was last seen
 from datetime import datetime, timezone
 
 
-@app.route('/')
-@app.route('/index')
+@app.route('/', methods=['GET', 'POST'])
+@app.route('/index', methods=['GET', 'POST'])
 @login_required
 def index():
+
+    form = PostForm()
+    if form.validate_on_submit():
+        post = Post(body=form.post.data, author=current_user)
+        db.session.add(post)
+        db.session.commit()
+        flash('Your post is now live!')
+        return redirect(url_for('index'))
 
     posts = [
         {
@@ -38,7 +48,8 @@ def index():
     # return('hey there')
     return render_template(
         'index.html',
-        title='Home',
+        title='Home Page',
+        form=form,
         posts=posts
     )
         

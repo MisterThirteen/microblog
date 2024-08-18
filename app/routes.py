@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 @login_required
 def index():
 
+    # Adding blog post form to the index page
     form = PostForm()
     if form.validate_on_submit():
         post = Post(body=form.post.data, author=current_user)
@@ -53,6 +54,7 @@ def index():
         posts=posts
     )
         
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
